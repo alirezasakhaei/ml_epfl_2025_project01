@@ -35,14 +35,22 @@ def mean_squared_error_sgd(
 
 def least_squares(y: np.ndarray, tx: np.ndarray) -> Tuple[np.ndarray, float]:
     """Least squares regression using normal equations."""
-    pass
+    b = tx.T @ y
+    A = tx.T @ tx
+    w = np.linalg.solve(A, b)
+    loss = np.mean((tx.dot(w) - y) ** 2) / 2
+    return w, loss
 
 
 def ridge_regression(
     y: np.ndarray, tx: np.ndarray, lambda_: float
 ) -> Tuple[np.ndarray, float]:
     """Ridge regression using normal equations."""
-    pass
+    b = tx.T @ y
+    A = tx.T @ tx + lambda_ * np.eye(tx.shape[1])
+    w = np.linalg.solve(A, b)
+    loss = np.mean((tx.dot(w) - y) ** 2) / 2
+    return w, loss
 
 
 def logistic_regression(
