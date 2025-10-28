@@ -20,6 +20,7 @@ def mean_squared_error_gd(
 def mean_squared_error_sgd(
     y: np.ndarray, tx: np.ndarray, initial_w: np.ndarray, max_iters: int, gamma: float
 ) -> Tuple[np.ndarray, float]:
+    """Stochastic Gradient descent algorithm for MSE."""
     w = initial_w
     n_samples = len(y)
     
