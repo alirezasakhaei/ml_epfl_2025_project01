@@ -46,7 +46,7 @@ def ridge_regression(
 ) -> Tuple[np.ndarray, float]:
     """Ridge regression using normal equations."""
     b = tx.T @ y
-    A = tx.T @ tx + lambda_ * np.eye(tx.shape[1])
+    A = tx.T @ tx + 2 * lambda_ * tx.shape[0] * np.identity(tx.shape[1])
     w = np.linalg.solve(A, b)
     loss = np.mean((tx.dot(w) - y) ** 2) / 2
     return w, loss
