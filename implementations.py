@@ -15,11 +15,22 @@ def mean_squared_error_gd(
     return w, loss
 
 
+
+
 def mean_squared_error_sgd(
     y: np.ndarray, tx: np.ndarray, initial_w: np.ndarray, max_iters: int, gamma: float
 ) -> Tuple[np.ndarray, float]:
-    """Stochastic gradient descent algorithm for MSE."""
-    pass
+    w = initial_w
+    n_samples = len(y)
+    
+    for _ in range(max_iters):
+        rand_order = np.random.permutation(n_samples)
+        for i in rand_order:
+            gradient = tx[i].T.dot(tx[i].dot(w) - y[i])
+            w = w - gamma * gradient
+    
+    loss = np.mean((y - tx.dot(w)) ** 2) / 2
+    return w, loss
 
 
 def least_squares(y: np.ndarray, tx: np.ndarray) -> Tuple[np.ndarray, float]:
