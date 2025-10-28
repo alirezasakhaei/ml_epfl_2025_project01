@@ -6,7 +6,13 @@ def mean_squared_error_gd(
     y: np.ndarray, tx: np.ndarray, initial_w: np.ndarray, max_iters: int, gamma: float
 ) -> Tuple[np.ndarray, float]:
     """Gradient descent algorithm for MSE."""
-    pass
+    w = initial_w
+    loss = (np.mean((tx.dot(w) - y) ** 2)) / 2
+    for _ in range(max_iters):
+        gradient = tx.T.dot(tx.dot(w) - y) / len(y)
+        w = w - gamma * gradient
+        loss = (np.mean((tx.dot(w) - y) ** 2)) / 2
+    return w, loss
 
 
 def mean_squared_error_sgd(
