@@ -36,7 +36,7 @@ def least_squares(y: np.ndarray, tx: np.ndarray) -> Tuple[np.ndarray, float]:
     """Least squares regression using normal equations."""
     b = tx.T @ y
     A = tx.T @ tx
-    w = np.linalg.solve(A, b)
+    w = np.linalg.pinv(A) @ b
     loss = np.mean((tx.dot(w) - y) ** 2) / 2
     return w, loss
 
