@@ -40,7 +40,6 @@ class DecisionTreeClassifier:
         if criterion not in ('gini', 'entropy'):
             raise ValueError(f"Only 'gini' and 'entropy' are supported, got {criterion}")
 
-    # --- Impurity functions ---
     def _gini(self, y):
         probs = np.bincount(y) / len(y)
         return 1.0 - np.sum(probs ** 2)
@@ -61,28 +60,97 @@ class DecisionTreeClassifier:
         best_score = float('inf')
         current_impurity = self._impurity(y)
 
+        n_total = y.shape[0]
+        classes = np.unique(y)
+        is_binary = (classes.size == 2) and (classes[0] == 0) and (classes[1] == 1)
+
         for feature_idx in feature_indices:
-            values = np.unique(X[:, feature_idx])
-            if len(values) == 1:
+            x = X[:, feature_idx]
+            if np.all(x == x[0]):
                 continue
 
-            for i in range(len(values) - 1):
-                threshold = (values[i] + values[i + 1]) / 2.0
-                left_mask = X[:, feature_idx] <= threshold
-                right_mask = ~left_mask
+            order = np.argsort(x, kind='mergesort')
+            xs = x[order]
+            ys = y[order]
 
-                if np.sum(left_mask) < self.min_samples_leaf or np.sum(right_mask) < self.min_samples_leaf:
+            diff = np.diff(xs)
+            if not np.any(diff != 0):
+                continue
+            candidates = np.where(diff != 0)[0]  
+            if self.min_samples_leaf > 1:
+                min_left = self.min_samples_leaf - 1
+                max_left = n_total - self.min_samples_leaf - 1
+                mask_valid = (candidates >= min_left) & (candidates <= max_left)
+                if not np.any(mask_valid):
                     continue
+                candidates = candidates[mask_valid]
 
-                n_total = len(y)
-                left_imp = self._impurity(y[left_mask])
-                right_imp = self._impurity(y[right_mask])
-                score = (np.sum(left_mask) / n_total) * left_imp + (np.sum(right_mask) / n_total) * right_imp
+            if is_binary:
+                cum_pos = np.cumsum(ys == 1)
+                total_pos = cum_pos[-1]
 
-                if score < best_score:
-                    best_score = score
+                left_size = candidates + 1
+                right_size = n_total - left_size
+                left_pos = cum_pos[candidates]
+                right_pos = total_pos - left_pos
+
+                if self.criterion == 'gini':
+                    lp = left_pos / left_size
+                    rp = right_pos / right_size
+                    left_gini = 1.0 - (lp * lp + (1.0 - lp) * (1.0 - lp))
+                    right_gini = 1.0 - (rp * rp + (1.0 - rp) * (1.0 - rp))
+                    score = (left_size / n_total) * left_gini + (right_size / n_total) * right_gini
+                else:  
+                    lp = left_pos / left_size
+                    rp = right_pos / right_size
+                    lp = np.clip(lp, 1e-12, 1 - 1e-12)
+                    rp = np.clip(rp, 1e-12, 1 - 1e-12)
+                    left_ent = -(lp * np.log2(lp) + (1.0 - lp) * np.log2(1.0 - lp))
+                    right_ent = -(rp * np.log2(rp) + (1.0 - rp) * np.log2(1.0 - rp))
+                    score = (left_size / n_total) * left_ent + (right_size / n_total) * right_ent
+
+                idx = int(np.argmin(score))
+                if score[idx] < best_score:
+                    best_score = float(score[idx])
+                    pos = candidates[idx]
                     best_feature = feature_idx
-                    best_threshold = threshold
+                    best_threshold = (xs[pos] + xs[pos + 1]) * 0.5
+            else:
+                k = classes.size
+                y_remap = np.searchsorted(classes, ys)
+                cum_counts = np.zeros((n_total, k), dtype=np.int64)
+                cum_counts[0, y_remap[0]] = 1
+                for i in range(1, n_total):
+                    cum_counts[i] = cum_counts[i - 1]
+                    cum_counts[i, y_remap[i]] += 1
+
+                for pos in candidates:
+                    left_size = pos + 1
+                    right_size = n_total - left_size
+                    left_counts = cum_counts[pos]
+                    right_counts = cum_counts[-1] - left_counts
+
+                    if left_size < self.min_samples_leaf or right_size < self.min_samples_leaf:
+                        continue
+
+                    if self.criterion == 'gini':
+                        lp = left_counts / left_size
+                        rp = right_counts / right_size
+                        left_imp = 1.0 - np.sum(lp * lp)
+                        right_imp = 1.0 - np.sum(rp * rp)
+                    else:
+                        lp = left_counts / left_size
+                        rp = right_counts / right_size
+                        lp = lp.clip(1e-12, 1.0)
+                        rp = rp.clip(1e-12, 1.0)
+                        left_imp = -np.sum(lp * np.log2(lp))
+                        right_imp = -np.sum(rp * np.log2(rp))
+
+                    score = (left_size / n_total) * left_imp + (right_size / n_total) * right_imp
+                    if score < best_score:
+                        best_score = float(score)
+                        best_feature = feature_idx
+                        best_threshold = (xs[pos] + xs[pos + 1]) * 0.5
 
         return best_feature, best_threshold, best_score, current_impurity
 
@@ -320,6 +388,12 @@ class RandomForestClassifier:
         else:
             with Pool(processes=n_jobs) as pool:
                 all_preds = np.array(list(pool.imap_unordered(_predict_tree, [(tree, X) for tree in self.estimators_])))
+
+        classes = self.classes_
+        if classes is not None and classes.size == 2 and classes[0] == 0 and classes[1] == 1:
+            mean_votes = all_preds.mean(axis=0)
+            return (mean_votes >= 0.5).astype(int)
+
         preds = []
         for i in range(X.shape[0]):
             votes, counts = np.unique(all_preds[:, i], return_counts=True)
