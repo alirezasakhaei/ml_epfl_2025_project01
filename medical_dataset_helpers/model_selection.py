@@ -145,9 +145,9 @@ class GridSearchCV:
             return self.scoring(estimator, X, y)
         elif self.scoring == 'accuracy':
             try:
-                from .metrics import accuracy_score
+                from .metrics_utils import accuracy_score
             except ImportError:
-                from metrics import accuracy_score
+                from metrics_utils import accuracy_score
             y_pred = estimator.predict(X)
             return accuracy_score(y, y_pred)
         else:
