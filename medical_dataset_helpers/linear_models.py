@@ -75,7 +75,7 @@ class LogisticRegression:
         if self.random_state is not None:
             np.random.seed(self.random_state)
         
-        coef = np.random.randn(n_features) * 0.01
+        coef = np.random.randn(n_features) * (1.0 / np.sqrt(n_features))
         intercept_val = 0.0
         
         prev_loss = float('inf')
@@ -96,7 +96,7 @@ class LogisticRegression:
                 prev_loss = loss
             
             error = predictions - y_binary
-            grad_coef = np.dot(error, X) / n_samples
+            grad_coef = np.dot(X.T, error) / n_samples
             
             if self.penalty == 'l2':
                 grad_coef += coef / self.C
@@ -140,7 +140,8 @@ class LogisticRegression:
         coef_flat = self.coef_.flatten()
         intercept_val = self.intercept_[0]
         z = np.dot(X, coef_flat) + intercept_val
-        predicted_indices = (z > 0).astype(int)
+        proba_positive = self._sigmoid(z)
+        predicted_indices = (proba_positive >= 0.5).astype(int)
         return self.classes_[predicted_indices]
     
     def score(self, X, y):
