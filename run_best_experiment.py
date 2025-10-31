@@ -4,7 +4,7 @@ from medical_dataset_helpers.preprocessing import MinMaxScaler
 from medical_dataset_helpers.ensemble_models import RandomForestClassifier
 
 print("Loading data...")
-x_train, x_test, y_train, train_ids, test_ids = load_csv_data("/data/dataset")
+x_train, x_test, y_train, train_ids, test_ids = load_csv_data("./data/dataset")
 
 print("Cleaning NaN columns...")
 temporary_stacked_x = np.vstack((x_train, x_test))
