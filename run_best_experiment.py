@@ -1,11 +1,8 @@
 import numpy as np
-import sys
-
-sys.path.append('medical_dataset_helpers')
-
 from helpers import load_csv_data, create_csv_submission
-from preprocessing import MinMaxScaler
-from ensemble_models import RandomForestClassifier
+from medical_dataset_helpers.preprocessing import MinMaxScaler
+from medical_dataset_helpers.ensemble_models import RandomForestClassifier
+from medical_dataset_helpers.metrics_utils import classification_report
 
 print("Loading data...")
 x_train, x_test, y_train, train_ids, test_ids = load_csv_data("/data/dataset")
@@ -50,7 +47,7 @@ x_test_scaled = scaler.transform(x_test_clean)
 
 print("Training Random Forest...")
 rf = RandomForestClassifier(
-    n_estimators=100,
+    n_estimators=300,
     max_depth=300,
     criterion='gini',
     max_features='sqrt',
@@ -66,6 +63,7 @@ print("Predicting on test set...")
 y_test_pred_binary = rf.predict(x_test_scaled)
 
 y_test_pred = (y_test_pred_binary * 2) - 1
+classification_report(y_test, y_test_pred)
 
 print("Creating submission file...")
 create_csv_submission(test_ids, y_test_pred, "final_submission.csv")
