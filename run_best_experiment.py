@@ -1,6 +1,5 @@
 import numpy as np
 from helpers import load_csv_data, create_csv_submission
-from medical_dataset_helpers.preprocessing import MinMaxScaler
 from medical_dataset_helpers.ensemble_models import RandomForestClassifier
 
 print("Loading data...")
@@ -39,29 +38,23 @@ print(f"  Positive samples: {np.sum(y_train_binary_balanced == 1)}")
 print(f"  Negative samples: {np.sum(y_train_binary_balanced == 0)}")
 print(f"  Total samples: {len(x_train_balanced)}")
 
-print("Applying MinMaxScaler...")
-scaler = MinMaxScaler()
-x_train_scaled = scaler.fit_transform(x_train_balanced)
-x_test_scaled = scaler.transform(x_test_clean)
-
 print("Training Random Forest...")
 rf = RandomForestClassifier(
-    n_estimators=300,
+    n_estimators=100,
     max_depth=None,
     criterion='gini',
     max_features='sqrt',
     bootstrap=True,
     random_state=42,
     n_jobs=-1,
-    verbose=1
+    verbose=0
 )
 
-rf.fit(x_train_scaled, y_train_binary_balanced)
+rf.fit(x_train_balanced, y_train_binary_balanced)
 print("Predicting on test set...")
-y_test_pred_binary = rf.predict(x_test_scaled)
+y_test_pred_binary = rf.predict(x_test_clean)
 y_test_pred = (y_test_pred_binary * 2) - 1
 
 print("Creating submission file...")
 create_csv_submission(test_ids, y_test_pred, "final_submission.csv")
 print("Submission file 'final_submission.csv' created successfully!")
-
